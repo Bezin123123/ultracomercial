@@ -302,7 +302,7 @@ const ETAPAS = [
   {s:"Não contatado",        tipo:"aberto"},
   {s:"1º contato enviado",   tipo:"aberto"},
   {s:"Sem resposta",         tipo:"frio"},
-  {s:"Respondeu",            tipo:"aberto"},
+  {s:"Em conversa",          tipo:"aberto"},
   {s:"Diagnóstico agendado", tipo:"aberto"},
   {s:"Em negociação",        tipo:"aberto"},
   {s:"Fechou contrato",      tipo:"ganho"},
@@ -312,15 +312,18 @@ const ETAPAS = [
 ];
 const STATUS  = ETAPAS.map(e => e.s);
 const ENCERRA = ["Fechou contrato","Sem interesse","Não é do perfil","Número inválido"];
-const QUENTE  = ["Respondeu","Diagnóstico agendado","Em negociação","Fechou contrato"];
+const QUENTE  = ["Em conversa","Diagnóstico agendado","Em negociação","Fechou contrato"];
 const AGENDOU = ["Diagnóstico agendado","Em negociação","Fechou contrato"];
 
 /* status do banco pode vir NULL, com espaço sobrando ou sem acento
    ("Nao contatado" no seed original). st() devolve sempre o rótulo canônico. */
 const semAcento = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+const APELIDOS = { "respondeu": "Em conversa" };   // nome antigo no banco → nome novo na tela
 function st(c){
   const v = (c && c.status != null) ? String(c.status).trim() : "";
   if(!v) return "Não contatado";
+  const apelido = APELIDOS[semAcento(v)];
+  if(apelido) return apelido;
   return STATUS.find(s => semAcento(s) === semAcento(v)) || v;
 }
 
