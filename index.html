@@ -243,6 +243,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 window.PRADO_CONFIG = {
   SUPABASE_URL:  "https://avitrcjknuphgdgzlmen.supabase.co",
   SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aXRyY2prbnVwaGdkZ3psbWVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NjI4MjEsImV4cCI6MjA5ODAzODgyMX0.R7GLAiNMXv76mpti8_Ftwr6DqL3JbLUiwC74PmPFNBw",
+  CONTA: "nome@prado.com",   // conta única da equipe — o login pede só a senha
   EQUIPE: ["Pedro", "Arthur", "Guilherme", "Henrique"],
   ALERTA_DIAS: 3,          // contato sem mexer começa a esquentar
   CRITICO_DIAS: 7,         // contato sem mexer vira problema
@@ -260,11 +261,8 @@ window.PRADO_CONFIG = {
 
 <div id="login" hidden>
   <h1>Rota Digital</h1>
-  <p>Entre com o login do time.</p>
-  <label for="email">E-mail</label>
-  <input id="email" type="email" autocomplete="username">
-  <label for="senha">Senha</label>
-  <input id="senha" type="password" autocomplete="current-password">
+  <p>Digita a senha da equipe.</p>
+  <input id="senha" type="password" autocomplete="current-password" autofocus placeholder="Senha">
   <button id="btEntrar">Entrar</button>
   <p class="erro" id="erroLogin"></p>
 </div>
@@ -368,7 +366,6 @@ const F = { sit:"todos", resp:"todos", uf:"", q:"" };
 /* ---------------- login ---------------- */
 $("#btEntrar").addEventListener("click", entrar);
 $("#senha").addEventListener("keydown", e => { if(e.key === "Enter") entrar(); });
-$("#email").addEventListener("keydown", e => { if(e.key === "Enter") $("#senha").focus(); });
 $("#btSair").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 $("#btAtualizar").addEventListener("click", () => carregar());
 
@@ -377,11 +374,11 @@ async function entrar(){
   $("#erroLogin").textContent = "";
   bt.disabled = true; bt.textContent = "Entrando…";
   const { error } = await sb.auth.signInWithPassword({
-    email: $("#email").value.trim(), password: $("#senha").value });
+    email: CFG.CONTA, password: $("#senha").value });
   bt.disabled = false; bt.textContent = "Entrar";
   if(error){
     $("#erroLogin").textContent = /Invalid login/i.test(error.message)
-      ? "E-mail ou senha não conferem." : error.message;
+      ? "Senha incorreta." : error.message;
     $("#senha").select(); return;
   }
   abrir();
@@ -389,7 +386,7 @@ async function entrar(){
 function telaLogin(msg){
   $("#app").hidden = true; $("#login").hidden = false;
   if(msg) $("#erroLogin").textContent = msg;
-  $("#email").focus();
+  $("#senha").focus();
 }
 function abrir(){
   $("#login").hidden = true; $("#app").hidden = false;
