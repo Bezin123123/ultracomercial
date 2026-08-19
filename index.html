@@ -132,6 +132,8 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:14p
 .idade.ok{background:#17301F;color:#6ADD8E}
 .uf{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;
   background:var(--linha2);color:var(--fraco);letter-spacing:.06em}
+.uf.adm{background:#12332E;color:#6FC5B0;font-weight:600;border:1px solid #245C52;
+  text-transform:uppercase;letter-spacing:.08em}
 .mais{padding:9px 11px;font-size:12px;color:var(--accent);font-weight:500;
   background:none;border:0;width:100%;text-align:left}
 .mais:hover{background:var(--surf2)}
@@ -340,6 +342,13 @@ const hora = () => new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:
 const soDigitos = t => String(t||"").replace(/\D/g,"");
 const store = (k,v) => { try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v);}catch(e){return null;} };
 const acha = id => DATA.find(c => String(c.id) === String(id));
+/* a coluna admin pode ser booleana ou texto — trata os dois */
+const ehAdmin = c => {
+  const v = c && c.admin;
+  if(v === true) return true;
+  if(v === false || v == null || v === "") return false;
+  return !["false","0","nao","não","n"].includes(semAcento(v));
+};
 const DIA = 86400000;
 
 function diasDesde(iso){
@@ -364,7 +373,7 @@ const ZAPICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22
 /* ---------------- estado ---------------- */
 let DATA = [], aba = "quadro", ME = "", fichaId = null;
 let arrastando = false, abertas = new Set(), graficos = [], ultimaCarga = 0, READY = false;
-const F = { sit:"todos", resp:"todos", uf:"", q:"" };
+const F = { sit:"todos", resp:"todos", uf:"", q:"", admin:false };
 
 /* ---------------- login ---------------- */
 $("#btEntrar").addEventListener("click", entrar);
@@ -524,6 +533,7 @@ function visiveis(){
     if(F.resp === "sem" && c.responsavel) return false;
     if(F.resp !== "todos" && F.resp !== "sem" && (c.responsavel || "") !== F.resp) return false;
     if(F.uf && c.uf !== F.uf) return false;
+    if(F.admin && !ehAdmin(c)) return false;
     const sit = situacao(c);
     if(F.sit === "atrasado" && sit !== "ATRASADO") return false;
     if(F.sit === "hoje"     && sit !== "HOJE") return false;
@@ -581,6 +591,7 @@ function render(){
     <select class="selbarra" id="fuf"><option value="">Todo o Brasil</option>
       ${ufs.map(u => `<option ${F.uf===u?"selected":""}>${esc(u)}</option>`).join("")}</select>
     <input class="busca" id="busca" type="search" placeholder="Buscar nome ou número" value="${esc(F.q)}">
+    <button class="chip" id="fadm" aria-pressed="${F.admin}">Só admins</button>
     <button class="chip" id="fcsv">Baixar CSV</button>
   </div>`;
 
@@ -644,7 +655,7 @@ function cartao(c){
     <div class="tags">
       ${chip ? `<span class="idade ${classe}">${esc(chip)}</span>` : ""}
       ${c.uf ? `<span class="uf">${esc(c.uf)}</span>` : ""}
-      ${c.admin ? `<span class="uf">admin</span>` : ""}
+      ${ehAdmin(c) ? `<span class="uf adm">admin</span>` : ""}
       ${c.observacoes ? `<span class="uf">anotado</span>` : ""}
     </div>
   </div>`;
@@ -870,6 +881,8 @@ function ligar(){
   document.querySelectorAll(".chip.dono").forEach(b => b.onclick = () => { F.resp = b.dataset.f; render(); });
   const uf = document.getElementById("fuf");
   if(uf) uf.onchange = () => { F.uf = uf.value; render(); };
+  const adm = document.getElementById("fadm");
+  if(adm) adm.onclick = () => { F.admin = !F.admin; render(); };
   const csv = document.getElementById("fcsv");
   if(csv) csv.onclick = baixarCSV;
 
