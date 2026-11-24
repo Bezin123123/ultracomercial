@@ -8,8 +8,9 @@ filtro, selects do card e do painel, "Você é…").
 Projeto Vercel `ultracomercial` **ligado ao Git** (`Bezin123123/ultracomercial`, branch `main`):
 push no `main` publica em produção sozinho (confirmado em 23/11/26: o deploy do commit
 `94fa53c` veio com `source: git`). Não precisa de `vercel deploy`.
-Até então o site era um carregador pequeno fixo num SHA do GitHub; isso acabou — conferir
-sempre que o `curl` de `ultracomercial.vercel.app` traz a página inteira, não um loader.
+A função de Indicação agora está no código; não existe mais carregador com remendos.
+Conferir sempre que o `curl` de `ultracomercial.vercel.app` traz a página inteira, não um loader.
 
 ## Histórico
 - 23/11/26: Allan entrou como responsável (`EQUIPE`).
+- 24/11/26: Indicação (chip "Só indicações", etiqueta ⭐ no card, template "Indicação de cliente", campo na ficha) entrou no `index.html` (`711a2fe`); antes vivia só nos remendos do carregador.
