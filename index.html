@@ -134,6 +134,8 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:14p
   background:var(--linha2);color:var(--fraco);letter-spacing:.06em}
 .uf.adm{background:#12332E;color:#6FC5B0;font-weight:600;border:1px solid #245C52;
   text-transform:uppercase;letter-spacing:.08em}
+.uf.ind{background:#3A2A0C;color:#FFC23D;font-weight:700;border:1px solid #6B4E12;letter-spacing:.02em}
+.chip.indc[aria-pressed="true"]{background:#FFC23D;border-color:#FFC23D;color:#2A1D00}
 .mais{padding:9px 11px;font-size:12px;color:var(--accent);font-weight:500;
   background:none;border:0;width:100%;text-align:left}
 .mais:hover{background:var(--surf2)}
@@ -256,7 +258,9 @@ window.PRADO_CONFIG = {
       "Olá, tudo bem? Aqui é o {eu}, da Prado & Co.\n\nA gente entrou em contato com o pessoal que esteve no encontro da Rota Digital em São Paulo. Somos uma agência que trabalha só com farmácia.\n\nPosso te mostrar rapidinho o que a gente faz? Consigo montar um diagnóstico gratuito da sua unidade, sem compromisso." },
     { nome: "Follow-up", texto:
       "Oi {nome}, aqui é o {eu} da Prado & Co. de novo.\n\nSó voltando pra saber se faz sentido eu te mandar o diagnóstico da sua farmácia. Se não for o momento, me fala tranquilo que eu paro por aqui." },
-    { nome: "Sem mensagem (só abrir a conversa)", texto: "" }
+    { nome: "Sem mensagem (só abrir a conversa)", texto: "" },
+    { nome: "Indicação de cliente", indicacao: true, texto:
+      "Oi {nome}, tudo bem? Aqui é o {eu}, da Prado & Co.\n\nPeguei teu contato por indicação de {indicador} — a gente cuida do marketing da farmácia.\n\nPosso te ligar rapidinho hoje pra te mostrar o que tá funcionando lá?" }
   ]
 };
 </script>
@@ -373,7 +377,7 @@ const ZAPICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22
 /* ---------------- estado ---------------- */
 let DATA = [], aba = "quadro", ME = "", fichaId = null;
 let arrastando = false, abertas = new Set(), graficos = [], ultimaCarga = 0, READY = false;
-const F = { sit:"todos", resp:"todos", uf:"", q:"", admin:false };
+const F = { sit:"todos", resp:"todos", uf:"", q:"", admin:false, ind:"" };
 
 /* ---------------- login ---------------- */
 $("#btEntrar").addEventListener("click", entrar);
@@ -500,8 +504,9 @@ function abrirZap(id){
   let idx = Number(store("prado_tpl") ?? (c.tipo === "nome" ? 0 : 1));
   let tpl = CFG.TEMPLATES[idx] || CFG.TEMPLATES[0];
   if(!c.nome && (tpl.texto || "").includes("{nome}")) tpl = CFG.TEMPLATES[1] || tpl;
+  if(c.indicado_por) tpl = CFG.TEMPLATES.find(t => t.indicacao) || tpl;
   const primeiro = (c.nome || "").split(/[\s.]+/)[0] || "";
-  const txt = (tpl.texto || "").replace(/{nome}/g, primeiro).replace(/{eu}/g, ME || "");
+  const txt = (tpl.texto || "").replace(/{nome}/g, primeiro).replace(/{eu}/g, ME || "").replace(/{indicador}/g, c.indicado_por || "um cliente nosso");
   window.open("https://wa.me/" + c.whatsapp + (txt ? "?text=" + encodeURIComponent(txt) : ""), "_blank");
   if(st(c) === "Não contatado"){
     const patch = { status:"1º contato enviado", primeiro_contato: c.primeiro_contato || hoje() };
@@ -534,6 +539,8 @@ function visiveis(){
     if(F.resp !== "todos" && F.resp !== "sem" && (c.responsavel || "") !== F.resp) return false;
     if(F.uf && c.uf !== F.uf) return false;
     if(F.admin && !ehAdmin(c)) return false;
+    if(F.ind === "__todas" && !c.indicado_por) return false;
+    if(F.ind && F.ind !== "__todas" && (c.indicado_por || "") !== F.ind) return false;
     const sit = situacao(c);
     if(F.sit === "atrasado" && sit !== "ATRASADO") return false;
     if(F.sit === "hoje"     && sit !== "HOJE") return false;
@@ -595,9 +602,17 @@ function render(){
     <button class="chip" id="fcsv">Baixar CSV</button>
   </div>`;
 
+  const inds = [...new Set(DATA.map(c => c.indicado_por).filter(Boolean))].sort();
+  const nInd = v => DATA.filter(c => v === "__todas" ? c.indicado_por : c.indicado_por === v).length;
+  const barraInd = inds.length ? `<div class="barra">
+    <span class="rot">Indicação</span>
+    ${[["","Todos"],["__todas","⭐ Só indicações"], ...inds.map(i => [i,i])]
+      .map(([v,r]) => `<button class="chip indc" data-i="${esc(v)}" aria-pressed="${F.ind===v}">${esc(r)}${v ? ` (${nInd(v)})` : ""}</button>`).join("")}
+  </div>` : "";
+
   const kpis = `<div class="kpis">
     <div class="kpi"><div class="rot">Contatos</div><div class="val">${br(total)}</div>
-      <div class="hint">${F.sit==="todos"&&F.resp==="todos"&&!F.uf&&!F.q ? "toda a base" : "no filtro atual"}</div></div>
+      <div class="hint">${F.sit==="todos"&&F.resp==="todos"&&!F.uf&&!F.q&&!F.ind ? "toda a base" : "no filtro atual"}</div></div>
     <div class="kpi"><div class="rot">Já abordados</div>
       <div class="val" style="color:var(--accent)">${pct(txAbord)}</div>
       <div class="hint">${br(abordados)} de ${br(total)}</div></div>
@@ -612,7 +627,7 @@ function render(){
       <div class="hint">${br(semdata)} sem data de retorno</div></div>
   </div>`;
 
-  $("#conteudo").innerHTML = barraSit + barraResp + kpis +
+  $("#conteudo").innerHTML = barraSit + barraResp + barraInd + kpis +
     (aba === "quadro" ? quadro(L)
      : aba === "fila" ? viewFila(f)
      : insights(L, {total, abordados, quentes, agendados, fechados}));
@@ -654,6 +669,7 @@ function cartao(c){
     </div>
     <div class="tags">
       ${chip ? `<span class="idade ${classe}">${esc(chip)}</span>` : ""}
+      ${c.indicado_por ? `<span class="uf ind">⭐ ${esc(c.indicado_por)}</span>` : ""}
       ${c.uf ? `<span class="uf">${esc(c.uf)}</span>` : ""}
       ${ehAdmin(c) ? `<span class="uf adm">admin</span>` : ""}
       ${c.observacoes ? `<span class="uf">anotado</span>` : ""}
@@ -710,6 +726,7 @@ function desenharFicha(){
   const dados = [
     ["Número", c.numero],
     ["WhatsApp", c.whatsapp],
+    ["Indicado por", c.indicado_por],
     ["UF", c.uf],
     ["Admin do grupo", c.admin ? "sim" : ""],
     ["Conferir nº", c.conferir],
@@ -866,7 +883,7 @@ function desenhar(L){
 /* ---------------- CSV ---------------- */
 function baixarCSV(){
   const cols = ["id","nome","numero","whatsapp","uf","admin","status","responsavel",
-    "primeiro_contato","proximo_followup","observacoes"];
+    "primeiro_contato","proximo_followup","observacoes","indicado_por"];
   const linhas = [cols.join(";")].concat(visiveis().map(c =>
     cols.map(k => `"${String(k === "status" ? st(c) : (c[k] ?? "")).replace(/"/g,'""')}"`).join(";")));
   const url = URL.createObjectURL(new Blob(["\uFEFF" + linhas.join("\n")], { type:"text/csv" }));
@@ -879,6 +896,7 @@ function baixarCSV(){
 function ligar(){
   document.querySelectorAll(".chip.sit").forEach(b => b.onclick = () => { F.sit = b.dataset.s; render(); });
   document.querySelectorAll(".chip.dono").forEach(b => b.onclick = () => { F.resp = b.dataset.f; render(); });
+  document.querySelectorAll(".chip.indc").forEach(b => b.onclick = () => { F.ind = b.dataset.i; render(); });
   const uf = document.getElementById("fuf");
   if(uf) uf.onchange = () => { F.uf = uf.value; render(); };
   const adm = document.getElementById("fadm");
