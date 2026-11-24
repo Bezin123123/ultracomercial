@@ -14,3 +14,4 @@ Conferir sempre que o `curl` de `ultracomercial.vercel.app` traz a página intei
 ## Histórico
 - 23/11/26: Allan entrou como responsável (`EQUIPE`).
 - 24/11/26: Indicação (chip "Só indicações", etiqueta ⭐ no card, template "Indicação de cliente", campo na ficha) entrou no `index.html` (`711a2fe`); antes vivia só nos remendos do carregador.
+- 24/11/26 (noite): VIRADA. Os contatos foram copiados pro CRM único (crmmeta, funil `ultra_comercial`, aba "Indicação / Outbound") e o `vercel.json` manda qualquer acesso daqui pro crmmeta.vercel.app. O `index.html` ficou no repo só como histórico. `public.rota_contatos` não é mais editada; o trigger `trg_rota_espelho` (rota → aquisicao.leads) pode ser removido.
